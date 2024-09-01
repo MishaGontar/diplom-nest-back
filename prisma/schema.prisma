@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model admins {
+  id          Int    @id @default(autoincrement())
+  login       String @unique @db.VarChar(255)
+  password    String @db.VarChar(255)
+  user_id     Int    @unique
+  secure_code String @db.VarChar(255)
+  users       users  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model auction_status {
+  id       Int        @id @default(autoincrement())
+  name     String     @unique @db.VarChar(50)
+  auctions auctions[]
+  lots     lots[]
+}
+
+model auctions {
+  id             Int            @id @default(autoincrement())
+  name           String         @db.VarChar(255)
+  description    String
+  seller_id      Int
+  status_id      Int            @default(1)
+  img_id         Int?
+  date_created   DateTime       @default(now()) @db.Timestamp(6)
+  date_finished  DateTime?      @db.Timestamp(6)
+  images         images?        @relation(fields: [img_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sellers        sellers        @relation(fields: [seller_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  auction_status auction_status @relation(fields: [status_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  lots           lots[]
+}
+
+model blocked_seller_users {
+  id           Int      @id @default(autoincrement())
+  seller_id    Int
+  user_id      Int
+  date_created DateTime @default(now()) @db.Timestamp(6)
+  sellers      sellers  @relation(fields: [seller_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users        users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model blocked_users {
+  id           Int      @id @default(autoincrement())
+  user_id      Int
+  date_created DateTime @default(now()) @db.Timestamp(6)
+  users        users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model images {
+  id         Int          @id @default(autoincrement())
+  name       String       @db.VarChar(255)
+  image_url  String       @unique @db.VarChar(255)
+  photo_data Bytes?
+  auctions   auctions[]
+  lot_images lot_images[]
+  users      users[]
+}
+
+model lot_bet {
+  id           Int          @id @default(autoincrement())
+  lot_id       Int
+  user_id      Int?
+  amount       Int          @default(0)
+  date_created DateTime     @default(now()) @db.Timestamp(6)
+  lots         lots         @relation(fields: [lot_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users        users?       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  lot_winner   lot_winner[]
+}
+
+model lot_images {
+  id     Int    @id @default(autoincrement())
+  lot_id Int
+  img_id Int
+  images images @relation(fields: [img_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  lots   lots   @relation(fields: [lot_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model lot_winner {
+  id           Int      @id @default(autoincrement())
+  lot_id       Int
+  lot_bet_id   Int
+  date_created DateTime @default(now()) @db.Timestamp(6)
+  lot_bet      lot_bet  @relation(fields: [lot_bet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  lots         lots     @relation(fields: [lot_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model lots {
+  id               Int            @id @default(autoincrement())
+  name             String         @db.VarChar(255)
+  description      String
+  seller_id        Int
+  auction_id       Int
+  status_id        Int            @default(1)
+  amount           Int            @default(0)
+  bank_card_number String?        @db.VarChar(19)
+  monobank_link    String?        @db.VarChar(255)
+  date_created     DateTime       @default(now()) @db.Timestamp(6)
+  date_finished    DateTime?      @db.Timestamp(6)
+  lot_bet          lot_bet[]
+  lot_images       lot_images[]
+  lot_winner       lot_winner[]
+  auctions         auctions       @relation(fields: [auction_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  sellers          sellers        @relation(fields: [seller_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  auction_status   auction_status @relation(fields: [status_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model seller_status {
+  id      Int       @id @default(autoincrement())
+  name    String    @unique @db.VarChar(50)
+  sellers sellers[]
+}
+
+model sellers {
+  id                   Int                    @id @default(autoincrement())
+  user_id              Int                    @unique
+  full_name            String                 @db.VarChar(255)
+  social_media         String                 @db.VarChar(255)
+  status_id            Int                    @default(1)
+  address              String?                @db.VarChar(255)
+  description          String
+  phone_number         String?                @db.VarChar(20)
+  auctions             auctions[]
+  blocked_seller_users blocked_seller_users[]
+  lots                 lots[]
+  seller_status        seller_status          @relation(fields: [status_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users                users                  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model users {
+  id                   Int                    @id @default(autoincrement())
+  username             String                 @unique @db.VarChar(255)
+  password             String                 @db.VarChar(255)
+  email                String                 @db.VarChar(255)
+  image_id             Int?                   @default(1)
+  is_activated         Boolean                @default(false)
+  admins               admins?
+  blocked_seller_users blocked_seller_users[]
+  blocked_users        blocked_users[]
+  lot_bet              lot_bet[]
+  sellers              sellers?
+  images               images?                @relation(fields: [image_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_codes          users_codes[]
+}
+
+model users_codes {
+  id      Int    @id @default(autoincrement())
+  code    String @unique @db.VarChar(255)
+  user_id Int
+  users   users  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_users_codes")
+}
